@@ -20,6 +20,10 @@ typedef struct {
 } AppContext;
 
 typedef struct {
+    mat4 mvp;
+} UniformData;
+
+typedef struct {
     SDL_GPUGraphicsPipeline *pipeline;
     SDL_GPUBuffer *vertex_buffer;
     SDL_GPUBuffer *index_buffer;
@@ -45,7 +49,7 @@ public:
     Texture2D* load_texture(const char *path);
 
     void begin_draw();
-    void draw_texture(Texture2D* texture, SDL_Rect* dst);
+    void draw_texture(Texture2D* texture);
     void end_draw();
 
 private:

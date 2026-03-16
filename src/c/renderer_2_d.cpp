@@ -11,14 +11,15 @@ SDL_GPUShader *Renderer2D::load_shader(SDL_GPUDevice *device, const char *path, 
     auto *code = SDL_LoadFile(path, &size);
     if (!code) return nullptr;
 
+
     SDL_GPUShaderCreateInfo shader_info = {
-        size,
-        static_cast<const Uint8 *>(code),
-        "main",
-        SDL_GPU_SHADERFORMAT_SPIRV,
-        stage,
-        num_uniforms,
-        num_sampler
+        .code = static_cast<const Uint8 *>(code),
+        .code_size = size,
+        .entrypoint = "main",
+        .format = SDL_GPU_SHADERFORMAT_SPIRV,
+        .stage = stage,
+        .num_uniform_buffers = num_uniforms,
+        .num_samplers = num_sampler
 
     };
 
@@ -81,7 +82,8 @@ bool Renderer2D::create_vertex_buffer() {
 
     const SDL_GPUBufferRegion buffer_region = {
         p_ctx->vertex_buffer,
-        buffer_size
+        0,
+        buffer_size,
     };
 
     SDL_UploadToGPUBuffer(copy, &transfer_buffer_location, &buffer_region, false);
@@ -133,7 +135,8 @@ bool Renderer2D::create_index_buffer() {
 
     SDL_GPUBufferRegion buffer_region = {
         p_ctx->index_buffer,
-        buffer_size
+        0,
+        buffer_size,
     };
 
     SDL_UploadToGPUBuffer(copy, &transfer_buffer_location, &buffer_region, false);
@@ -210,16 +213,27 @@ bool Renderer2D::create_pipeline() {
 }
 
 Renderer2D::~Renderer2D() {
-    delete p_ctx;
+    if (p_ctx) {
+        if (p_ctx->pipeline)
+            SDL_ReleaseGPUGraphicsPipeline(ctx->device, p_ctx->pipeline);
+
+        if (p_ctx->vertex_buffer)
+            SDL_ReleaseGPUBuffer(ctx->device, p_ctx->vertex_buffer);
+
+        if (p_ctx->index_buffer)
+            SDL_ReleaseGPUBuffer(ctx->device, p_ctx->index_buffer);
+
+        delete p_ctx;
+        p_ctx = nullptr;
+    }
 }
 
 void Renderer2D::init(AppContext *ctx) {
     this->ctx = ctx;
+    p_ctx = new PipelineContext();
     if (!create_vertex_buffer() || !create_index_buffer() || !create_pipeline()) {
         SDL_Log("Failed to init renderer_2d");
     }
-
-    p_ctx = new PipelineContext();
 }
 
 Texture2D *Renderer2D::load_texture(const char *path) {
@@ -371,6 +385,28 @@ void Renderer2D::begin_draw() {
         .offset = 0
     };
 
+    UniformData ubo;
+    mat4 model, view, proj;
+
+    glm_mat4_identity(model);
+    glm_rotate(model, (float) SDL_GetTicks() * 0.001f, (vec3){0, 0, 1});
+    glm_translate_make(view, (vec3){0, 0, -2.0f});
+
+
+    float aspect = static_cast<float>(p_ctx->swap_chain_width) / static_cast<float>(p_ctx->swap_chain_height);
+    float ortho_size = 1.0f;
+    glm_ortho(-ortho_size * aspect, ortho_size * aspect, -ortho_size, ortho_size, 0.1f, 100.0f, proj);
+
+    mat4 view_proj;
+    glm_mat4_mul(proj, view, view_proj);
+    glm_mat4_mul(view_proj, model, ubo.mvp);
+
+    SDL_PushGPUVertexUniformData(p_ctx->command_buffer, 0, &ubo, sizeof(ubo));
+
+    constexpr vec4 color = {1.0f, 1.0f, 1.0f, 1.0f};
+
+    SDL_PushGPUFragmentUniformData(p_ctx->command_buffer, 0, color, sizeof(color));
+
     SDL_BindGPUVertexBuffers(p_ctx->render_pass, 0, &vertex_buffer_binding, 1);
 
     SDL_GPUBufferBinding index_buffer_binding = {
@@ -381,7 +417,7 @@ void Renderer2D::begin_draw() {
     SDL_BindGPUIndexBuffer(p_ctx->render_pass, &index_buffer_binding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
 }
 
-void Renderer2D::draw_texture(Texture2D *texture, SDL_Rect *dst) {
+void Renderer2D::draw_texture(Texture2D *texture) {
     SDL_GPUTextureSamplerBinding binding = {
         .texture = texture->texture,
         .sampler = texture->sampler

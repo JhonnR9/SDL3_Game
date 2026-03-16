@@ -41,9 +41,9 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(SDL3 SDL_ttf SDL_image cglm)
 
 add_executable(my_c_game
-        src/c/main.c
+        src/c/main.cpp
         src/c/label.c
-        src/cpp/renderer_2_d.cpp
+        src/c/renderer_2_d.cpp
 )
 
 target_link_libraries(my_c_game PRIVATE
