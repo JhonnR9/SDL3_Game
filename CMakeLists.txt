@@ -1,8 +1,7 @@
 cmake_minimum_required(VERSION 3.31)
 
-project(my_c_game C CXX)
+project(my_c_game CXX)
 
-set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 26)
 
 include(FetchContent)
@@ -41,9 +40,9 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(SDL3 SDL_ttf SDL_image cglm)
 
 add_executable(my_c_game
-        src/c/main.cpp
-        src/c/label.c
-        src/c/renderer_2_d.cpp
+        src/main.cpp
+        src/label.cpp
+        src/renderer_2_d.cpp
 )
 
 target_link_libraries(my_c_game PRIVATE

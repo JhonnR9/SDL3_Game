@@ -9,6 +9,8 @@
 #include <cglm/cglm.h>
 #include <array>
 
+#include "vector_2.h"
+
 typedef struct {
     float x, y, z;
     float u, v;
@@ -21,6 +23,7 @@ typedef struct {
 
 typedef struct {
     mat4 mvp;
+    vec4 color;
 } UniformData;
 
 typedef struct {
@@ -32,13 +35,14 @@ typedef struct {
     SDL_GPUTexture *swap_texture;
     SDL_GPUCommandBuffer *command_buffer;
     SDL_GPURenderPass *render_pass;
+    mat4 view_proj;
 } PipelineContext;
 
 typedef struct {
     SDL_GPUTexture *texture;
     SDL_GPUSampler *sampler;
-    int width;
-    int height;
+    float width;
+    float height;
 } Texture2D;
 
 class Renderer2D {
@@ -47,9 +51,10 @@ public:
     ~Renderer2D();
     void init(AppContext *ctx);
     Texture2D* load_texture(const char *path);
+    Texture2D* create_texture_from_surface(SDL_Surface* surface);
 
     void begin_draw();
-    void draw_texture(Texture2D* texture);
+    void draw_texture(Texture2D *texture, Vector2 position, float rotation, Vector2 scale, Vector2 size);
     void end_draw();
 
 private:

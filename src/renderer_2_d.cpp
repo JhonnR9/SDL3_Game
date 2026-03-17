@@ -5,6 +5,8 @@
 #include "renderer_2_d.h"
 #include <SDL3_image/SDL_image.h>
 
+#include "vector_2.h"
+
 SDL_GPUShader *Renderer2D::load_shader(SDL_GPUDevice *device, const char *path, SDL_GPUShaderStage stage,
                                        uint32_t num_uniforms, uint32_t num_sampler) {
     size_t size;
@@ -30,10 +32,10 @@ SDL_GPUShader *Renderer2D::load_shader(SDL_GPUDevice *device, const char *path, 
 
 std::array<Vertex, 4> Renderer2D::create_quad_vertex() {
     return std::array{
-        Vertex{-0.5f, 0.5f, 0.0f, 0.0f, 0.0f}, // TL
-        Vertex{0.5f, 0.5f, 0.0f, 1.0f, 0.0f}, // TR
-        Vertex{-0.5f, -0.5f, 0.0f, 0.0f, 1.0f}, // BL
-        Vertex{0.5f, -0.5f, 0.0f, 1.0f, 1.0f} // BR
+        Vertex{0.0f, 0.0f, 0.0f, 0.0f, 0.0f}, // TL
+        Vertex{1.0f, 0.0f, 0.0f, 1.0f, 0.0f}, // TR
+        Vertex{0.0f, 1.0f, 0.0f, 0.0f, 1.0f}, // BL
+        Vertex{1.0f, 1.0f, 0.0f, 1.0f, 1.0f} // BR
     };
 }
 
@@ -237,14 +239,21 @@ void Renderer2D::init(AppContext *ctx) {
 }
 
 Texture2D *Renderer2D::load_texture(const char *path) {
-    SDL_Surface *surface_texture = IMG_Load(path);
-    if (!surface_texture) {
+    SDL_Surface *surface = IMG_Load(path);
+    if (!surface) {
         SDL_Log("Failed to load texture: %s", path);
         return nullptr;
     }
 
-    SDL_Surface *rgba = SDL_ConvertSurface(surface_texture, SDL_PIXELFORMAT_RGBA32);
-    SDL_DestroySurface(surface_texture);
+    Texture2D *tex = create_texture_from_surface(surface);
+
+    SDL_DestroySurface(surface);
+    return tex;
+}
+
+
+Texture2D *Renderer2D::create_texture_from_surface(SDL_Surface *surface) {
+    SDL_Surface *rgba = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA32);
     if (!rgba) {
         SDL_Log("Failed to convert surface to RGBA32");
         return nullptr;
@@ -261,8 +270,9 @@ Texture2D *Renderer2D::load_texture(const char *path) {
     };
 
     auto *texture_2d = new Texture2D();
-    texture_2d->width = rgba->w;
-    texture_2d->height = rgba->h;
+    texture_2d->width = static_cast<float>(rgba->w);
+    texture_2d->height = static_cast<float>(rgba->h);
+
     texture_2d->texture = SDL_CreateGPUTexture(ctx->device, &texture_info);
     if (!texture_2d->texture) {
         SDL_Log("Failed to create texture: %s", SDL_GetError());
@@ -271,13 +281,16 @@ Texture2D *Renderer2D::load_texture(const char *path) {
         return nullptr;
     }
 
-    uint32_t size = rgba->w * rgba->h * 4;
-    SDL_GPUTransferBufferCreateInfo transfer_info = {
+    const uint32_t size = rgba->w * rgba->h * 4;
+
+    const SDL_GPUTransferBufferCreateInfo transfer_info = {
         .size = size,
         .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
     };
 
-    SDL_GPUTransferBuffer *transfer_buffer = SDL_CreateGPUTransferBuffer(ctx->device, &transfer_info);
+    SDL_GPUTransferBuffer *transfer_buffer =
+            SDL_CreateGPUTransferBuffer(ctx->device, &transfer_info);
+
     if (!transfer_buffer) {
         SDL_Log("Failed to create transfer buffer");
         SDL_DestroySurface(rgba);
@@ -287,36 +300,27 @@ Texture2D *Renderer2D::load_texture(const char *path) {
     }
 
     void *map = SDL_MapGPUTransferBuffer(ctx->device, transfer_buffer, false);
-    if (!map) {
-        SDL_Log("Failed to map transfer buffer");
-        SDL_ReleaseGPUTransferBuffer(ctx->device, transfer_buffer);
-        SDL_DestroySurface(rgba);
-        SDL_ReleaseGPUTexture(ctx->device, texture_2d->texture);
-        delete texture_2d;
-        return nullptr;
-    }
-
     SDL_memcpy(map, rgba->pixels, size);
     SDL_UnmapGPUTransferBuffer(ctx->device, transfer_buffer);
 
     SDL_GPUCommandBuffer *cmd = SDL_AcquireGPUCommandBuffer(ctx->device);
     SDL_GPUCopyPass *copy = SDL_BeginGPUCopyPass(cmd);
 
-    SDL_GPUTextureTransferInfo gpu_texture_transfer_info = {
+    SDL_GPUTextureTransferInfo transfer = {
         .transfer_buffer = transfer_buffer,
         .offset = 0,
         .pixels_per_row = static_cast<uint32_t>(rgba->w),
-        .rows_per_layer = static_cast<uint32_t>(rgba->h),
+        .rows_per_layer = static_cast<uint32_t>(rgba->h)
     };
 
-    SDL_GPUTextureRegion gpu_texture_region = {
+    const SDL_GPUTextureRegion region = {
         .texture = texture_2d->texture,
         .w = static_cast<uint32_t>(rgba->w),
         .h = static_cast<uint32_t>(rgba->h),
         .d = 1
     };
 
-    SDL_UploadToGPUTexture(copy, &gpu_texture_transfer_info, &gpu_texture_region, false);
+    SDL_UploadToGPUTexture(copy, &transfer, &region, false);
 
     SDL_GPUSamplerCreateInfo sampler_info = {
         .min_filter = SDL_GPU_FILTER_LINEAR,
@@ -327,17 +331,6 @@ Texture2D *Renderer2D::load_texture(const char *path) {
     };
 
     texture_2d->sampler = SDL_CreateGPUSampler(ctx->device, &sampler_info);
-    if (!texture_2d->sampler) {
-        SDL_Log("Failed to create sampler for texture: %s", SDL_GetError());
-        SDL_EndGPUCopyPass(copy);
-        SDL_SubmitGPUCommandBuffer(cmd);
-        SDL_ReleaseGPUTransferBuffer(ctx->device, transfer_buffer);
-        SDL_ReleaseGPUTexture(ctx->device, texture_2d->texture);
-        SDL_DestroySurface(rgba);
-        delete texture_2d;
-        return nullptr;
-    }
-
 
     SDL_EndGPUCopyPass(copy);
     SDL_SubmitGPUCommandBuffer(cmd);
@@ -393,13 +386,8 @@ void Renderer2D::begin_draw() {
     glm_translate_make(view, (vec3){0, 0, -2.0f});
 
 
-    float aspect = static_cast<float>(p_ctx->swap_chain_width) / static_cast<float>(p_ctx->swap_chain_height);
-    float ortho_size = 1.0f;
-    glm_ortho(-ortho_size * aspect, ortho_size * aspect, -ortho_size, ortho_size, 0.1f, 100.0f, proj);
-
-    mat4 view_proj;
-    glm_mat4_mul(proj, view, view_proj);
-    glm_mat4_mul(view_proj, model, ubo.mvp);
+    glm_mat4_mul(proj, view, p_ctx->view_proj);
+    glm_mat4_mul(p_ctx->view_proj, model, ubo.mvp);
 
     SDL_PushGPUVertexUniformData(p_ctx->command_buffer, 0, &ubo, sizeof(ubo));
 
@@ -415,20 +403,46 @@ void Renderer2D::begin_draw() {
     };
 
     SDL_BindGPUIndexBuffer(p_ctx->render_pass, &index_buffer_binding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
+
+    const float left = 0.0f;
+    float right = static_cast<float>(p_ctx->swap_chain_width);
+    float top = 0.0f;
+    float bottom = static_cast<float>(p_ctx->swap_chain_height);
+    float near = -1.0f;
+    float far = 1.0f;
+
+    glm_ortho(left, right, bottom, top, near, far, p_ctx->view_proj);
 }
 
-void Renderer2D::draw_texture(Texture2D *texture) {
+void Renderer2D::draw_texture(Texture2D *texture, Vector2 position, float rotation, Vector2 scale, Vector2 size) {
+    UniformData ubo;
+
+    mat4 model;
+    glm_mat4_identity(model);
+
+    glm_translate(model, (vec3){position.x, position.y, 0.0f});
+
+    glm_rotate(model, rotation, (vec3){0, 0, 1});
+
+    glm_scale(model, (vec3){scale.x * size.x, scale.y * size.y, 1.0f});
+
+    glm_mat4_mul(p_ctx->view_proj, model, ubo.mvp);
+
+    float tmp_color[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+    memcpy(ubo.color, tmp_color, sizeof(tmp_color));
+
+    SDL_PushGPUVertexUniformData(p_ctx->command_buffer, 0, &ubo, sizeof(ubo));
+
     SDL_GPUTextureSamplerBinding binding = {
         .texture = texture->texture,
         .sampler = texture->sampler
     };
-
     SDL_BindGPUFragmentSamplers(p_ctx->render_pass, 0, &binding, 1);
 
     SDL_DrawGPUIndexedPrimitives(
         p_ctx->render_pass,
-        6, // indices
-        1, // instances
+        6,
+        1,
         0,
         0,
         0
@@ -437,6 +451,5 @@ void Renderer2D::draw_texture(Texture2D *texture) {
 
 void Renderer2D::end_draw() {
     SDL_EndGPURenderPass(p_ctx->render_pass);
-
     SDL_SubmitGPUCommandBuffer(p_ctx->command_buffer);
 }
