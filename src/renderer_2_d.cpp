@@ -248,6 +248,15 @@ Texture2D *Renderer2D::load_texture(const char *path) {
     Texture2D *tex = create_texture_from_surface(surface);
 
     SDL_DestroySurface(surface);
+
+    const float left = 0.0f;
+    float right = 640.f;
+    float top = 0.0f;
+    float bottom = 480.0f;
+    float near = -1.0f;
+    float far = 1.0f;
+
+    glm_ortho(left, right, bottom, top, near, far, p_ctx->view_proj);
     return tex;
 }
 
@@ -379,15 +388,22 @@ void Renderer2D::begin_draw() {
     };
 
     UniformData ubo;
-    mat4 model, view, proj;
+    mat4 proj, view;
 
-    glm_mat4_identity(model);
-    glm_rotate(model, static_cast<float>(SDL_GetTicks()) * 0.001f, (vec3){0, 0, 1});
-    glm_translate_make(view, (vec3){0, 0, -2.0f});
+    float left = 0.0f;
+    float right = (float)p_ctx->swap_chain_width;
+    float top = 0.0f;
+    float bottom = (float)p_ctx->swap_chain_height;
 
+    glm_ortho(left, right, bottom, top, -1.0f, 1.0f, proj);
 
+    glm_mat4_identity(view);
+    // opcional (camera):
+    // glm_translate_make(view, (vec3){0, 0, -2.0f});
+
+    // guarda VP pronto
     glm_mat4_mul(proj, view, p_ctx->view_proj);
-    glm_mat4_mul(p_ctx->view_proj, model, ubo.mvp);
+
 
     SDL_PushGPUVertexUniformData(p_ctx->command_buffer, 0, &ubo, sizeof(ubo));
 
@@ -404,14 +420,7 @@ void Renderer2D::begin_draw() {
 
     SDL_BindGPUIndexBuffer(p_ctx->render_pass, &index_buffer_binding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
 
-    const float left = 0.0f;
-    float right = static_cast<float>(p_ctx->swap_chain_width);
-    float top = 0.0f;
-    float bottom = static_cast<float>(p_ctx->swap_chain_height);
-    float near = -1.0f;
-    float far = 1.0f;
 
-    glm_ortho(left, right, bottom, top, near, far, p_ctx->view_proj);
 }
 
 void Renderer2D::draw_texture(Texture2D *texture, Vector2 position, float rotation, Vector2 scale, Vector2 size) {
@@ -421,11 +430,10 @@ void Renderer2D::draw_texture(Texture2D *texture, Vector2 position, float rotati
     glm_mat4_identity(model);
 
     glm_translate(model, (vec3){position.x, position.y, 0.0f});
-
     glm_rotate(model, rotation, (vec3){0, 0, 1});
-
     glm_scale(model, (vec3){scale.x * size.x, scale.y * size.y, 1.0f});
 
+    // MVP = VP * MODEL
     glm_mat4_mul(p_ctx->view_proj, model, ubo.mvp);
 
     SDL_PushGPUVertexUniformData(p_ctx->command_buffer, 0, &ubo, sizeof(ubo));
