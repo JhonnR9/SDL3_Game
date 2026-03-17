@@ -22,6 +22,15 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
     ctx->device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, true, nullptr);
 
     if (!ctx->device || !SDL_ClaimWindowForGPUDevice(ctx->device, ctx->window)) return SDL_APP_FAILURE;
+
+    SDL_SetGPUSwapchainParameters(
+      ctx->device,
+      ctx->window,
+      SDL_GPU_SWAPCHAINCOMPOSITION_SDR,
+      SDL_GPU_PRESENTMODE_IMMEDIATE
+  );
+
+
     if (!TTF_Init()) {
         SDL_Log("TTF init failed: %s", SDL_GetError());
         return SDL_APP_FAILURE;

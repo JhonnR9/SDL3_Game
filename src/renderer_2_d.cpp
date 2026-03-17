@@ -13,7 +13,6 @@ SDL_GPUShader *Renderer2D::load_shader(SDL_GPUDevice *device, const char *path, 
     auto *code = SDL_LoadFile(path, &size);
     if (!code) return nullptr;
 
-
     SDL_GPUShaderCreateInfo shader_info = {
         .code = static_cast<const Uint8 *>(code),
         .code_size = size,
@@ -32,10 +31,10 @@ SDL_GPUShader *Renderer2D::load_shader(SDL_GPUDevice *device, const char *path, 
 
 std::array<Vertex, 4> Renderer2D::create_quad_vertex() {
     return std::array{
-        Vertex{0.0f, 0.0f, 0.0f, 0.0f, 0.0f}, // TL
-        Vertex{1.0f, 0.0f, 0.0f, 1.0f, 0.0f}, // TR
-        Vertex{0.0f, 1.0f, 0.0f, 0.0f, 1.0f}, // BL
-        Vertex{1.0f, 1.0f, 0.0f, 1.0f, 1.0f} // BR
+        Vertex{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f}, // TL
+        Vertex{1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f}, // TR
+        Vertex{0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f}, // BL
+        Vertex{1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f} // BR
     };
 }
 
@@ -187,7 +186,8 @@ bool Renderer2D::create_pipeline() {
 
     SDL_GPUVertexAttribute vertex_attributes[] = {
         {.location = 0, .buffer_slot = 0, .format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3, .offset = 0},
-        {.location = 1, .buffer_slot = 0, .format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, .offset = sizeof(float) * 3}
+        {.location = 1, .buffer_slot = 0, .format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, .offset = sizeof(float) * 3},
+        {.location = 2, .buffer_slot = 0, .format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4, .offset = sizeof(float) * 5},
     };
 
     SDL_GPUGraphicsPipelineCreateInfo pipeline_info = {
@@ -198,7 +198,7 @@ bool Renderer2D::create_pipeline() {
         .vertex_input_state = {
             .num_vertex_buffers = 1,
             .vertex_buffer_descriptions = &vertex_buffer_desc,
-            .num_vertex_attributes = 2,
+            .num_vertex_attributes = 3,
             .vertex_attributes = vertex_attributes
         },
         .primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST,
@@ -382,7 +382,7 @@ void Renderer2D::begin_draw() {
     mat4 model, view, proj;
 
     glm_mat4_identity(model);
-    glm_rotate(model, (float) SDL_GetTicks() * 0.001f, (vec3){0, 0, 1});
+    glm_rotate(model, static_cast<float>(SDL_GetTicks()) * 0.001f, (vec3){0, 0, 1});
     glm_translate_make(view, (vec3){0, 0, -2.0f});
 
 
@@ -427,9 +427,6 @@ void Renderer2D::draw_texture(Texture2D *texture, Vector2 position, float rotati
     glm_scale(model, (vec3){scale.x * size.x, scale.y * size.y, 1.0f});
 
     glm_mat4_mul(p_ctx->view_proj, model, ubo.mvp);
-
-    float tmp_color[4] = {1.0f, 1.0f, 1.0f, 1.0f};
-    memcpy(ubo.color, tmp_color, sizeof(tmp_color));
 
     SDL_PushGPUVertexUniformData(p_ctx->command_buffer, 0, &ubo, sizeof(ubo));
 

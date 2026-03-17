@@ -14,6 +14,7 @@
 typedef struct {
     float x, y, z;
     float u, v;
+    float r, g, b, a;
 } Vertex;
 
 typedef struct {
@@ -23,7 +24,6 @@ typedef struct {
 
 typedef struct {
     mat4 mvp;
-    vec4 color;
 } UniformData;
 
 typedef struct {
