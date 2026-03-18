@@ -6,6 +6,9 @@ set(CMAKE_CXX_STANDARD 26)
 
 include(FetchContent)
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+
 # SDL3
 FetchContent_Declare(
         SDL3
@@ -42,7 +45,6 @@ FetchContent_MakeAvailable(SDL3 SDL_ttf SDL_image cglm)
 add_executable(my_c_game
         src/main.cpp
         src/label.cpp
-        src/renderer_2_d.cpp
 )
 
 target_link_libraries(my_c_game PRIVATE
@@ -50,4 +52,18 @@ target_link_libraries(my_c_game PRIVATE
         SDL3_ttf::SDL3_ttf
         SDL3_image::SDL3_image
 )
+
 target_include_directories(my_c_game PRIVATE ${cglm_SOURCE_DIR}/include)
+
+add_custom_command(TARGET my_c_game POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_RUNTIME_DLLS:my_c_game>
+        $<TARGET_FILE_DIR:my_c_game>
+        COMMAND_EXPAND_LISTS
+)
+
+add_custom_command(TARGET my_c_game POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/assets
+        $<TARGET_FILE_DIR:my_c_game>/assets
+)

@@ -4,9 +4,8 @@
 
 #include "label.h"
 #include <SDL3_ttf/SDL_ttf.h>
-#include "renderer_2_d.h"
 
-Label::Label(const char *text, Renderer2D *renderer) {
+Label::Label(const char *text, SDL_Renderer *renderer) {
     this->renderer = renderer;
     this->data.font_texture = nullptr;
     this->data.font = nullptr;
@@ -20,11 +19,15 @@ Label::Label(const char *text, Renderer2D *renderer) {
     this->data.font = TTF_OpenFont(this->font_file_name, this->font_size);
 
     if (!this->data.font) {
-        SDL_Log("Couldn't open font %s" , this->font_file_name);
+        SDL_Log("Couldn't open font %s", this->font_file_name);
         return;
     }
 
     update_texture();
+}
+
+Label::~Label() {
+    SDL_DestroyTexture(data.font_texture);
 
 }
 
@@ -44,12 +47,11 @@ void Label::update_texture() {
     this->data.font_dst = SDL_FRect{
         this->position.x,
         this->position.y,
-        (float)text_surface->w,
-        (float)text_surface->h
+        (float) text_surface->w,
+        (float) text_surface->h
     };
 
-    this->data.font_texture = renderer->create_texture_from_surface(text_surface);
+    this->data.font_texture = SDL_CreateTextureFromSurface(renderer, text_surface);
 
     SDL_DestroySurface(text_surface);
 }
-

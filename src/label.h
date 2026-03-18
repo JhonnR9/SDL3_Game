@@ -3,26 +3,23 @@
 
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
-
-#include "renderer_2_d.h"
 #include "vector_2.h"
-
-
 
 class Label {
 public:
     struct Data {
         TTF_Font* font = nullptr;
-        Texture2D* font_texture = nullptr;
+        SDL_Texture* font_texture = nullptr;
         SDL_FRect font_dst{};
     };
 
-    Label(const char* text, Renderer2D* renderer);
+    Label(const char* text, SDL_Renderer* renderer);
+    ~Label();
     void update_texture();
 
 
 private:
-    Renderer2D* renderer;
+    SDL_Renderer* renderer;
     Data data{};
 
 public:
@@ -68,8 +65,8 @@ public:
     }
 
     void set_text_color(const SDL_Color &text_color) {
-        update_texture();
         this->text_color = text_color;
+        update_texture();
     }
 
     Vector2 get_position() const {
