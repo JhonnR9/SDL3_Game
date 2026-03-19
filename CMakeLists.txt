@@ -8,7 +8,6 @@ include(FetchContent)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-
 # SDL3
 FetchContent_Declare(
         SDL3
@@ -22,7 +21,6 @@ FetchContent_Declare(
         GIT_REPOSITORY https://github.com/libsdl-org/SDL_ttf.git
         GIT_TAG release-3.2.2
 )
-
 set(SDLTTF_VENDORED ON)
 set(SDLTTF_HARFBUZZ OFF)
 
@@ -40,11 +38,25 @@ FetchContent_Declare(
         GIT_TAG v0.9.6
 )
 
-FetchContent_MakeAvailable(SDL3 SDL_ttf SDL_image cglm)
+# EnTT
+FetchContent_Declare(
+        entt
+        GIT_REPOSITORY https://github.com/skypjack/entt.git
+        GIT_TAG v3.11.0
+)
+
+FetchContent_MakeAvailable(SDL3 SDL_ttf SDL_image cglm entt)
 
 add_executable(my_c_game
         src/main.cpp
+        src/app.cpp
         src/label.cpp
+        src/my_scene.cpp
+        src/my_scene.h
+        src/Scene.cpp
+        src/System.h
+        src/render_system.cpp
+        src/render_system.h
 )
 
 target_link_libraries(my_c_game PRIVATE
@@ -53,7 +65,10 @@ target_link_libraries(my_c_game PRIVATE
         SDL3_image::SDL3_image
 )
 
-target_include_directories(my_c_game PRIVATE ${cglm_SOURCE_DIR}/include)
+target_include_directories(my_c_game PRIVATE
+        ${cglm_SOURCE_DIR}/include
+        ${entt_SOURCE_DIR}/single_include
+)
 
 add_custom_command(TARGET my_c_game POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
