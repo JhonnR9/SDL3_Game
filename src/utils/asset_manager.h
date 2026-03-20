@@ -5,8 +5,6 @@
 #ifndef ASSET_MANAGER_H
 #define ASSET_MANAGER_H
 
-
-
 #include <SDL3/SDL.h>
 #include <string>
 #include <unordered_map>
@@ -28,14 +26,14 @@ public:
     void load_all_from_folder(const std::string& folder);
     void request_texture(const std::string& path);
 
-    SDL_Texture* GetTexture(const std::string& path);
+    SDL_Texture* get_texture(const std::string& path);
 
-    void ProcessGPUUploads();
+    void process_gpu_uploads();
 
-    void Shutdown();
+    void shutdown();
 
 private:
-    void WorkerThread();
+    void worker_thread();
 
     SDL_Renderer* renderer;
 

@@ -12,18 +12,18 @@ namespace fs = std::filesystem;
 AssetManager::AssetManager(SDL_Renderer* renderer)
     : renderer(renderer)
 {
-    worker = std::thread(&AssetManager::WorkerThread, this);
+    worker = std::thread(&AssetManager::worker_thread, this);
 }
 
 AssetManager::~AssetManager() {
-    Shutdown();
+    shutdown();
 
     for (auto& [k, v] : textures) {
         SDL_DestroyTexture(v);
     }
 }
 
-void AssetManager::Shutdown() {
+void AssetManager::shutdown() {
     {
         std::lock_guard lock(mutex);
         running = false;
@@ -36,15 +36,20 @@ void AssetManager::Shutdown() {
 }
 
 void AssetManager::load_all_from_folder(const std::string& folder) {
-    for (auto& entry : fs::recursive_directory_iterator(folder)) {
-        if (!entry.is_regular_file()) continue;
+    try {
+        for (auto& entry : fs::recursive_directory_iterator(folder)) {
+            if (!entry.is_regular_file()) continue;
 
-        std::string path = entry.path().string();
+            std::string path = entry.path().generic_string();
 
-        if (path.ends_with(".png") || path.ends_with(".jpg")) {
-            request_texture(path);
+            if (path.ends_with(".png") || path.ends_with(".jpg")) {
+                request_texture(path);
+            }
         }
+    } catch (const std::exception& e) {
+        std::cerr << "Error while scanning folder: " << e.what() << std::endl;
     }
+
 }
 
 void AssetManager::request_texture(const std::string& path) {
@@ -57,16 +62,15 @@ void AssetManager::request_texture(const std::string& path) {
     cond_var.notify_one();
 }
 
-SDL_Texture* AssetManager::GetTexture(const std::string& path) {
+SDL_Texture* AssetManager::get_texture(const std::string& path) {
     std::lock_guard lock(mutex);
 
-    if (textures.contains(path))
-        return textures[path];
-
-    return nullptr;
+    const auto it = textures.find(path);
+    return (it != textures.end()) ? it->second : nullptr;
 }
 
-void AssetManager::WorkerThread() {
+
+void AssetManager::worker_thread() {
     while (true) {
         std::unique_lock lock(mutex);
 
@@ -94,7 +98,7 @@ void AssetManager::WorkerThread() {
     }
 }
 
-void AssetManager::ProcessGPUUploads() {
+void AssetManager::process_gpu_uploads() {
     std::lock_guard lock(mutex);
 
     while (!gpu_queue.empty()) {

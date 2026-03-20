@@ -8,11 +8,13 @@
 #include <SDL3/SDL.h>
 #include <map>
 
+#include "utils/asset_manager.h"
+
 class RenderSystem final : public System{
     SDL_Renderer* renderer{nullptr};
     std::map<std::string, SDL_Texture*> textures;
+    AssetManager* asset_manager{nullptr};
 
-    void load_textures();
 public:
     RenderSystem(entt::registry &registry, SDL_Renderer* renderer);
     ~RenderSystem() override;

@@ -16,8 +16,8 @@ void MyScene::init(SDL_Renderer* renderer) {
     Transform transform;
     Sprite sprite;
 
-    sprite.texture_path = "assets/image.png";
-    transform.scale = Vector2(1.f, 1.f);
+    sprite.texture_path = "assets/atlas_texture/atlas_0.png";
+    transform.scale = Vector2(0.3f, 0.3f);
 
     registry.emplace<Transform>(player, transform);
     registry.emplace<Sprite>(player, sprite);

@@ -4,12 +4,12 @@
 #include <entt/entt.hpp>
 #include <SDL3/SDL_render.h>
 #include "SDL3/SDL_init.h"
+#include "utils/asset_manager.h"
 
 typedef struct {
     SDL_Window *window;
     SDL_Renderer *renderer;
 } AppContext;
-
 
 class Scene;
 
@@ -22,7 +22,7 @@ public:
 
 private:
     std::unique_ptr<entt::registry> registry;
-
+    std::unique_ptr<AssetManager> asset_manager;
     std::unique_ptr<AppContext> ctx;
 
     std::unique_ptr<Scene> current_scene;
