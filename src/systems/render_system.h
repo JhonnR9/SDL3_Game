@@ -14,7 +14,7 @@ class RenderSystem final : public System{
 
     void load_textures();
 public:
-    RenderSystem(entt::registry *registry, SDL_Renderer* renderer);
+    RenderSystem(entt::registry &registry, SDL_Renderer* renderer);
     ~RenderSystem() override;
 
     void run(float dt) override;

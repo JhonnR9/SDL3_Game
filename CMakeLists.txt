@@ -8,6 +8,8 @@ include(FetchContent)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+add_subdirectory(tools/)
+
 # SDL3
 FetchContent_Declare(
         SDL3
@@ -48,15 +50,16 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(SDL3 SDL_ttf SDL_image cglm entt)
 
 add_executable(my_c_game
-        src/main.cpp
-        src/app.cpp
-        src/label.cpp
-        src/my_scene.cpp
-        src/my_scene.h
-        src/Scene.cpp
-        src/System.h
-        src/render_system.cpp
-        src/render_system.h
+        src/main/main.cpp
+        src/main/app.cpp
+        src/scenes/my_scene.cpp
+        src/scenes/my_scene.h
+        src/scenes/scene.cpp
+        src/systems/system.h
+        src/systems/render_system.cpp
+        src/systems/render_system.h
+        src/utils/asset_manager.cpp
+        src/utils/asset_manager.h
 )
 
 target_link_libraries(my_c_game PRIVATE
@@ -68,6 +71,7 @@ target_link_libraries(my_c_game PRIVATE
 target_include_directories(my_c_game PRIVATE
         ${cglm_SOURCE_DIR}/include
         ${entt_SOURCE_DIR}/single_include
+        src/
 )
 
 add_custom_command(TARGET my_c_game POST_BUILD
@@ -81,4 +85,10 @@ add_custom_command(TARGET my_c_game POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/assets
         $<TARGET_FILE_DIR:my_c_game>/assets
+)
+
+add_custom_command(TARGET my_c_game POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/assets/images
+        $<TARGET_FILE_DIR:my_c_game>/assets/images
 )

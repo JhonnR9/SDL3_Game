@@ -4,8 +4,7 @@
 #define COMPONENTS_H
 #include <string>
 
-#include "vector_2.h"
-#include "SDL3/SDL_surface.h"
+#include "utils/vector_2.h"
 
 typedef struct {
     Vector2 position = Vector2(0, 0);

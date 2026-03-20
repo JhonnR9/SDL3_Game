@@ -9,12 +9,10 @@
 
 class System {
 protected:
-    entt::registry *registry;
+    entt::registry &registry;
 
 public:
-    explicit System(entt::registry *registry) {
-        this->registry = registry;
-    };
+    explicit System(entt::registry &registry) : registry(registry) {};
 
     virtual ~System() = default;
 

@@ -2,12 +2,11 @@
 // Created by jhone on 18/03/2026.
 //
 
-#include "render_system.h"
+#include "systems/render_system.h"
 #include <SDL3_image/SDL_image.h>
 #include <filesystem>
 #include <ranges>
-
-#include "components.h"
+#include "components/components.h"
 #include <stdio.h>
 
 void RenderSystem::load_textures() {
@@ -40,13 +39,13 @@ void RenderSystem::load_textures() {
             textures[key] = texture;
 
            // SDL_LogDebug(SDL_LOG_CATEGORY_ERROR,"Loaded texture: %s", key.c_str());
-            printf("Loaded texture: %s\n", key.c_str());
+            //printf("Loaded texture: %s\n", key.c_str());
 
         }
     }
 }
 
-RenderSystem::RenderSystem(entt::registry *registry, SDL_Renderer *renderer): System(registry) {
+RenderSystem::RenderSystem(entt::registry &registry, SDL_Renderer *renderer): System(registry) {
     this->renderer = renderer;
     load_textures();
 }
@@ -59,7 +58,7 @@ RenderSystem::~RenderSystem() {
 }
 
 void RenderSystem::run(float dt) {
-    for (auto view = registry->view<Transform, Sprite>(); const auto entity: view) {
+    for (auto view = registry.view<Transform, Sprite>(); const auto entity: view) {
         auto &&[transform, sprite] = view.get<Transform, Sprite>(entity);
 
         if (textures.contains(sprite.texture_path)) {
